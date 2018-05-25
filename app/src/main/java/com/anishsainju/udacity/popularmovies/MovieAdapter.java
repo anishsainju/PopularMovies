@@ -21,7 +21,6 @@ import java.util.List;
 
 public class MovieAdapter extends ArrayAdapter<Movie>{
 
-    private List<Movie> mMovieData;
     private Context context;
 
     public MovieAdapter(Activity context) {
@@ -52,7 +51,7 @@ public class MovieAdapter extends ArrayAdapter<Movie>{
     }
 
     public void setMovieData(List<Movie> movieData) {
-        mMovieData = movieData;
+        clear();
         addAll(movieData);
         notifyDataSetChanged();
     }

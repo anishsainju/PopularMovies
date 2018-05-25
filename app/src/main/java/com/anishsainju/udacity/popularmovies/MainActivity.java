@@ -7,6 +7,10 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.GridView;
@@ -26,12 +30,16 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = MainActivity.class.getSimpleName();
+
     private GridView mGridView;
     private MovieAdapter mMovieAdapter;
     private TextView mErrorMessageDisplay;
     private ProgressBar mLoadingIndicator;
 
     private List<Movie> moviesList;
+
+    private static final NetworkUtils.Endpoint DEFAULT_ENDPOINT = NetworkUtils.Endpoint.POPULAR;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,17 +73,17 @@ public class MainActivity extends AppCompatActivity {
         mLoadingIndicator = (ProgressBar) findViewById(R.id.pb_loading_indicator);
 
         /* Once all of our views are setup, we can load the weather data. */
-        loadMoviesData();
+        loadMoviesData(DEFAULT_ENDPOINT);
     }
 
     /**
      *
      */
-    private void loadMoviesData() {
+    private void loadMoviesData(NetworkUtils.Endpoint endpoint) {
         showMoviesDataView();
 
         //TODO get user selected Endpoint
-        new FetchMoviesDataTask().execute(NetworkUtils.Endpoint.TOPRATED);
+        new FetchMoviesDataTask().execute(endpoint);
     }
     private void showMoviesDataView() {
         /* First, make sure the error is invisible */
@@ -128,6 +136,7 @@ public class MainActivity extends AppCompatActivity {
                     moviesList = JsonUtils.parseMoviesJson(jsonMoviesResponse);
                     showMoviesDataView();
                     mMovieAdapter.setMovieData(moviesList);
+                    Log.v(TAG, "onPostExecute: successfully loaded movies data");
                 } catch (JSONException e) {
                     e.printStackTrace();
                     showErrorMessage();
@@ -149,5 +158,47 @@ public class MainActivity extends AppCompatActivity {
         mGridView.setVisibility(View.INVISIBLE);
         /* Then, show the error */
         mErrorMessageDisplay.setVisibility(View.VISIBLE);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.sort, menu);
+
+        // Get the menu item to set it checked as default sort order
+        MenuItem sortByPopular = menu.findItem(R.id.sort_by_popular);
+        MenuItem sortByTopRated = menu.findItem(R.id.sort_by_top_rated);
+        if (DEFAULT_ENDPOINT == NetworkUtils.Endpoint.POPULAR) {
+            sortByPopular.setChecked(true);
+        } else if (DEFAULT_ENDPOINT == NetworkUtils.Endpoint.TOPRATED) {
+            sortByTopRated.setChecked(true);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.sort_by_popular:
+                if (item.isChecked()) {
+                    //item.setChecked(false);
+                } else {
+                    item.setChecked(true);
+                    NetworkUtils.Endpoint endpoint = NetworkUtils.Endpoint.POPULAR;
+                    loadMoviesData(endpoint);
+                }
+                return true;
+            case R.id.sort_by_top_rated:
+                if (item.isChecked()) {
+                    //item.setChecked(false);
+                } else {
+                    item.setChecked(true);
+                    NetworkUtils.Endpoint endpoint = NetworkUtils.Endpoint.TOPRATED;
+                    loadMoviesData(endpoint);
+                }
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 }

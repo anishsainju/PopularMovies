@@ -9,4 +9,6 @@
     <string name="release_date_label">RELEASED:</string>
     <string name="user_rating_label">RATING:</string>
     <string name="overview_unavailable">Overview not available</string>
+    <string name="sort_by_popular">Most Popular</string>
+    <string name="sort_by_top_rated">Top Rated</string>
 </resources>
