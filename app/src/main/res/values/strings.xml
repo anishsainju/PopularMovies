@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">Popular Movies</string>
+    <string name="error_message">
+        An error has occurred. Please try again by clicking REFRESH
+    </string>
+    <string name="detail_error_message">Some error has occurred. Please try again.</string>
+    <string name="backrop_picture_content_description">Movie Backdrop picture</string>
+    <string name="poster_picture_content_description">Movie Poster Picture</string>
+    <string name="release_date_label">RELEASED:</string>
+    <string name="user_rating_label">RATING:</string>
+    <string name="overview_unavailable">Overview not available</string>
+</resources>
