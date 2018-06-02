@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
@@ -16,64 +15,62 @@
             <ImageView
                 android:id="@+id/iv_backdrop"
                 android:layout_width="match_parent"
-                android:layout_height="230dp"
+                android:layout_height="@dimen/activity_detail_backdrop_image_height"
                 android:adjustViewBounds="true"
                 android:contentDescription="@string/backrop_picture_content_description"
                 android:scaleType="centerCrop" />
 
             <ImageView
                 android:id="@+id/iv_poster"
-                android:layout_width="123dp"
-                android:layout_height="185dp"
+                android:layout_width="@dimen/activity_detail_poster_width"
+                android:layout_height="@dimen/activity_detail_poster_height"
                 android:layout_marginLeft="30dp"
                 android:adjustViewBounds="true"
                 android:contentDescription="@string/poster_picture_content_description"
                 android:scaleType="centerCrop"
                 app:layout_constraintBottom_toBottomOf="@+id/iv_backdrop"
                 app:layout_constraintLeft_toLeftOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/iv_backdrop"
-                />
+                app:layout_constraintTop_toBottomOf="@+id/iv_backdrop" />
 
             <TextView
                 android:id="@+id/tv_release_date_label"
+                style="@style/detail_activity_textview_style"
                 android:layout_marginLeft="20dp"
                 android:text="@string/release_date_label"
                 app:layout_constraintLeft_toRightOf="@+id/iv_poster"
-                app:layout_constraintTop_toBottomOf="@+id/iv_backdrop"
-                style="@style/detail_activity_textview_style"/>
+                app:layout_constraintTop_toBottomOf="@+id/iv_backdrop" />
 
             <TextView
                 android:id="@+id/tv_release_date"
+                style="@style/detail_activity_textview_style"
                 android:layout_marginLeft="8dp"
                 app:layout_constraintLeft_toRightOf="@+id/tv_release_date_label"
                 app:layout_constraintTop_toBottomOf="@+id/iv_backdrop"
-                tools:text="2018-04-25"
-                style="@style/detail_activity_textview_style"/>
+                tools:text="2018-04-25" />
 
             <TextView
                 android:id="@+id/tv_user_rating_label"
+                style="@style/detail_activity_textview_style"
                 android:text="@string/user_rating_label"
                 app:layout_constraintLeft_toLeftOf="@+id/tv_release_date_label"
-                app:layout_constraintTop_toBottomOf="@+id/tv_release_date_label"
-                style="@style/detail_activity_textview_style"/>
+                app:layout_constraintTop_toBottomOf="@+id/tv_release_date_label" />
 
             <TextView
                 android:id="@+id/tv_user_rating"
+                style="@style/detail_activity_textview_style"
                 app:layout_constraintLeft_toLeftOf="@+id/tv_release_date"
                 app:layout_constraintTop_toBottomOf="@+id/tv_release_date"
-                tools:text="7.5"
-                style="@style/detail_activity_textview_style" />
+                tools:text="7.5" />
 
             <TextView
                 android:id="@+id/tv_overview"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:layout_constraintTop_toBottomOf="@+id/iv_poster"
-                android:layout_marginTop="12dp"
                 android:layout_marginLeft="12dp"
                 android:layout_marginRight="12dp"
-                android:textAppearance="@style/TextAppearance.AppCompat.Medium"/>
+                android:layout_marginTop="12dp"
+                android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+                app:layout_constraintTop_toBottomOf="@+id/iv_poster" />
         </android.support.constraint.ConstraintLayout>
-
     </ScrollView>
 </layout>

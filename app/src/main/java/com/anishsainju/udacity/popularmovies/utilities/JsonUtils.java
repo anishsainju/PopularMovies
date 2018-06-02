@@ -63,7 +63,6 @@ public class JsonUtils {
      * },
      * ...
      */
-
     public static final String RESULTS = "results";
     public static final String VOTE_COUNT = "vote_count";
     public static final String ID = "id";
@@ -84,7 +83,6 @@ public class JsonUtils {
     public static List<Movie> parseMoviesJson(String jsonMoviesResponse) throws JSONException {
 
         JSONObject moviesData = new JSONObject(jsonMoviesResponse);
-
         JSONArray moviesList = moviesData.getJSONArray(RESULTS);
 
         List<Movie> movies = new ArrayList<>();
@@ -128,7 +126,6 @@ public class JsonUtils {
                     adult,
                     overview,
                     releaseDate);
-
             movies.add(thisMovie);
         }
         return movies;

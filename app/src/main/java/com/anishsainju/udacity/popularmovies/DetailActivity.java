@@ -18,7 +18,6 @@ public class DetailActivity extends AppCompatActivity {
 
     ActivityDetailBinding activityDetailBinding;
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -31,9 +30,9 @@ public class DetailActivity extends AppCompatActivity {
             closeOnError();
         }
 
+        // Obtain the Parcelable Movie object
         movie = intent.getParcelableExtra(MOVIE);
         if (movie == null) {
-            // EXTRA_POSITION not found in intent
             closeOnError();
             return;
         }
@@ -58,8 +57,19 @@ public class DetailActivity extends AppCompatActivity {
                 .placeholder(R.drawable.ic_no_image)
                 .into(activityDetailBinding.ivPoster);
 
-        activityDetailBinding.tvReleaseDate.setText(movie.getReleaseDate());
-        activityDetailBinding.tvUserRating.setText(movie.getVoteAverage().toString());
+        String releaseDate = movie.getReleaseDate();
+        if (releaseDate.isEmpty()) {
+            activityDetailBinding.tvReleaseDate.setText(R.string.not_available);
+        } else {
+            activityDetailBinding.tvReleaseDate.setText(releaseDate);
+        }
+
+        String voteAverage = movie.getVoteAverage().toString();
+        if (voteAverage.isEmpty()) {
+            activityDetailBinding.tvUserRating.setText(R.string.not_available);
+        } else {
+            activityDetailBinding.tvUserRating.setText(voteAverage);
+        }
 
         String overview = movie.getOverview();
         if (overview.isEmpty()) {
@@ -69,4 +79,3 @@ public class DetailActivity extends AppCompatActivity {
         }
     }
 }
-

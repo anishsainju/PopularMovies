@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="activity_detail_backdrop_image_height">230dp</dimen>
+    <dimen name="activity_detail_poster_width">123dp</dimen>
+    <dimen name="activity_detail_poster_height">185dp</dimen>
+</resources>

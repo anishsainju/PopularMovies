@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Popular Movies</string>
     <string name="error_message">
-        An error has occurred. Please try again by clicking REFRESH
+        An error has occurred. Please try again by restarting the app.
     </string>
     <string name="detail_error_message">Some error has occurred. Please try again.</string>
     <string name="backrop_picture_content_description">Movie Backdrop picture</string>
@@ -11,4 +11,7 @@
     <string name="overview_unavailable">Overview not available</string>
     <string name="sort_by_popular">Most Popular</string>
     <string name="sort_by_top_rated">Top Rated</string>
+    <string name="customSortByText">Sort By</string>
+    <string name="picture_content_description">Movie Image Description</string>
+    <string name="not_available">Not available</string>
 </resources>

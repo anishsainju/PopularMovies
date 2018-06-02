@@ -5,7 +5,12 @@ import android.os.Parcelable;
 
 import java.util.List;
 
-public class Movie implements Parcelable{
+/**
+ * POJO class for Movie
+ * Fields based on JSON response from
+ * http://api.themoviedb.org/3/movie/popular?api_key=[YOUR_API_KEY]
+ */
+public class Movie implements Parcelable {
 
     /* JSON response from http://api.themoviedb.org/3/movie/popular?api_key=[YOUR_API_KEY]
     {
@@ -128,7 +133,7 @@ public class Movie implements Parcelable{
     public void writeToParcel(Parcel parcel, int i) {
         parcel.writeInt(voteCount);
         parcel.writeInt(id);
-        parcel.writeByte((byte) (video ? 1:0));
+        parcel.writeByte((byte) (video ? 1 : 0));
         parcel.writeDouble(voteAverage);
         parcel.writeString(title);
         parcel.writeDouble(popularity);
@@ -137,13 +142,13 @@ public class Movie implements Parcelable{
         parcel.writeString(originalTitle);
         parcel.writeIntArray(genreIds);
         parcel.writeString(backdropPath);
-        parcel.writeByte((byte) (adult ? 1:0));
+        parcel.writeByte((byte) (adult ? 1 : 0));
         parcel.writeString(overview);
         parcel.writeString(releaseDate);
     }
 
     //constructor used for parcel
-    public Movie(Parcel parcel){
+    public Movie(Parcel parcel) {
         //read and set saved values from parcel
         voteCount = parcel.readInt();
         id = parcel.readInt();
@@ -154,7 +159,6 @@ public class Movie implements Parcelable{
         posterPath = parcel.readString();
         originalLanguage = parcel.readString();
         originalTitle = parcel.readString();
-//        parcel.readIntArray(getGenreIds());
         genreIds = parcel.createIntArray();
         backdropPath = parcel.readString();
         adult = parcel.readByte() != 0;
@@ -163,7 +167,7 @@ public class Movie implements Parcelable{
     }
 
     //creator - used when un-parceling our parcle (creating the object)
-    public static final Parcelable.Creator<Movie> CREATOR = new Parcelable.Creator<Movie>(){
+    public static final Parcelable.Creator<Movie> CREATOR = new Parcelable.Creator<Movie>() {
 
         @Override
         public Movie createFromParcel(Parcel parcel) {
@@ -175,5 +179,4 @@ public class Movie implements Parcelable{
             return new Movie[size];
         }
     };
-
 }
