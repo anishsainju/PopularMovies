@@ -1,26 +1,34 @@
 package com.anishsainju.udacity.popularmovies;
 
-import android.content.Context;
+import android.app.Dialog;
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.Configuration;
-import android.os.AsyncTask;
+import android.support.annotation.Nullable;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.app.NavUtils;
+import android.support.v4.content.AsyncTaskLoader;
+import android.support.v4.content.Loader;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.preference.PreferenceManager;
 import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.GridView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.anishsainju.udacity.popularmovies.model.Movie;
+import com.anishsainju.udacity.popularmovies.utilities.Endpoint;
 import com.anishsainju.udacity.popularmovies.utilities.JsonUtils;
 import com.anishsainju.udacity.popularmovies.utilities.NetworkUtils;
 
@@ -34,12 +42,15 @@ import java.util.List;
 /**
  * MainActivity class
  */
-public class MainActivity extends AppCompatActivity implements MovieAdapter.MovieAdapterOnClickHandler {
+public class MainActivity extends AppCompatActivity implements MovieAdapter.MovieAdapterOnClickHandler, LoaderManager.LoaderCallbacks<String>, SharedPreferences.OnSharedPreferenceChangeListener {
 
     private static final String TAG = MainActivity.class.getSimpleName();
 
-    // Constant for user's sort selection, used in savedInstanceState
-    private static final String USER_SORT_SELECTION = "user_sort_selection";
+    // a constant int (chosen arbitrarily) to uniquely identify your loader.
+    private static final int MOVIES_DATA_LOADER_ID = 143;
+
+    private static final String ENDPOINT_INDEX = "sortOrderIndex";
+    private static final int DEFAULT_ENDPOINT_INDEX = 0; // index based on Endpoint constants
 
     // UI components
     private RecyclerView mRecyclerViewMovies;
@@ -50,11 +61,8 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     private MovieAdapter mMovieAdapter;
 
     private List<Movie> moviesList = new ArrayList<>();
-
-    // Enum for user's sort selection (either Top Rated or Popular)
-    private NetworkUtils.Endpoint endpointUserSelection;
-    // Default is Popular
-    private static final NetworkUtils.Endpoint DEFAULT_ENDPOINT = NetworkUtils.Endpoint.POPULAR;
+    private List<Movie> favoriteMoviesList = new ArrayList<>();
+    private SharedPreferences sharedPreferences;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,13 +73,13 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
          * Using findViewById, we get a reference to our RecyclerView from xml. This allows us to
          * do things like set the adapter of the RecyclerView and toggle the visibility.
          */
-        mRecyclerViewMovies = (RecyclerView) findViewById(R.id.rv_movies);
+        mRecyclerViewMovies = findViewById(R.id.rv_movies);
 
         /* This TextView is used to display errors and will be hidden if there are no errors */
-        mErrorMessageDisplay = (TextView) findViewById(R.id.tv_error_message_display);
+        mErrorMessageDisplay = findViewById(R.id.tv_error_message_display);
 
         /*
-         * We will use GridLayoutManager to view the movie images in grid style in the recylerView
+         * We will use GridLayoutManager to view the movie images in grid style in the recyclerView
          * numberOfColumns is set to 2 for Portrait orientation, and 3 for Landscape
          */
         int numberOfColumns = getColumnsNumByOrientation();
@@ -102,20 +110,140 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
          * Please note: This so called "ProgressBar" isn't a bar by default. It is more of a
          * circle. We didn't make the rules (or the names of Views), we just follow them.
          */
-        mLoadingIndicator = (ProgressBar) findViewById(R.id.pb_loading_indicator);
+        mLoadingIndicator = findViewById(R.id.pb_loading_indicator);
 
-        // Set Default
-        endpointUserSelection = DEFAULT_ENDPOINT;
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
-        /* Once all of our views are setup, we can load the weather data. */
-        loadMoviesData(endpointUserSelection);
+        // Register MainActivity as a OnSharedPreferenceChangedListener in onCreate
+        /*
+         * Register MainActivity as an OnPreferenceChangedListener to receive a callback when a
+         * SharedPreference has changed. Please note that we must unregister MainActivity as an
+         * OnSharedPreferenceChanged listener in onDestroy to avoid any memory leaks.
+         */
+        PreferenceManager.getDefaultSharedPreferences(this)
+                .registerOnSharedPreferenceChangeListener(this);
+
+        favoriteViewModelInit();
+    }
+
+    private void favoriteViewModelInit() {
+        MainViewModel viewModel = ViewModelProviders.of(this).get(MainViewModel.class);
+        viewModel.getMovies().observe(this, new Observer<List<Movie>>() {
+            @Override
+            public void onChanged(@Nullable List<Movie> movies) {
+                Log.d(TAG, "Updating list of favorite movies from LiveData in ViewModel");
+                favoriteMoviesList = movies;
+                int sortByIndex = sharedPreferences.getInt(ENDPOINT_INDEX, DEFAULT_ENDPOINT_INDEX);
+                if (sortByIndex == Endpoint.FAVORITE_INDEX) {
+                    moviesList = favoriteMoviesList;
+                    showMovies(moviesList);
+                } else {
+                    getSupportLoaderManager().restartLoader(MOVIES_DATA_LOADER_ID, null, MainActivity.this);
+                }
+            }
+        });
+    }
+
+    @Override
+    public Loader<String> onCreateLoader(int id, final Bundle args) {
+        return new AsyncTaskLoader<String>(this) {
+
+            // Create a String member variable called mMoviesJson that will store the raw JSON
+            /* This String will contain the raw JSON from the results of API call */
+            String mMoviesJson;
+
+            @Override
+            protected void onStartLoading() {
+                // If mMoviesJson is not null, deliver that result. Otherwise, force a load
+                /*
+                 * If we already have cached results, just deliver them now. If we don't have any
+                 * cached results, force a load.
+                 */
+                if (mMoviesJson != null) {
+                    Log.v(TAG, "loaded cached movies data");
+                    deliverResult(mMoviesJson);
+                } else {
+                    Log.v(TAG, "force loading movies data");
+                    /*
+                     * When we initially begin loading in the background, we want to display the
+                     * loading indicator to the user
+                     */
+                    mLoadingIndicator.setVisibility(View.VISIBLE);
+                    forceLoad();
+                }
+            }
+
+            @Override
+            public String loadInBackground() {
+                // Get the String for our URL from the bundle passed to onCreateLoader
+                int sortByIndex = sharedPreferences.getInt(ENDPOINT_INDEX, DEFAULT_ENDPOINT_INDEX);
+                String moviesUrlString = Endpoint.ENDPOINT_URLS[sortByIndex];
+
+                // If the URL is null or empty, return null
+                if (moviesUrlString == null || TextUtils.isEmpty(moviesUrlString)) {
+                    return null;
+                }
+                URL moviesURL = NetworkUtils.buildURL(moviesUrlString);
+                /* Parse the URL from the passed in String and perform the search */
+                try {
+                    Log.v(TAG, "loadInBackground: loading movies data from API");
+                    return NetworkUtils.getResponseFromHttpUrl(moviesURL);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return null;
+                }
+            }
+
+            // Override deliverResult and store the data in mGithubJson
+            // Call super.deliverResult after storing the data
+            @Override
+            public void deliverResult(String moviesJson) {
+                mMoviesJson = moviesJson;
+                super.deliverResult(moviesJson);
+            }
+        };
+    }
+
+    @Override
+    public void onLoadFinished(Loader<String> loader, String data) {
+        // Hide the loading indicator
+        /* When we finish loading, we want to hide the loading indicator from the user. */
+        mLoadingIndicator.setVisibility(View.INVISIBLE);
+
+        /*
+         * If the results are null, we assume an error has occurred. There are much more robust
+         * methods for checking errors, but we wanted to keep this particular example simple.
+         */
+        if (null == data) {
+            showErrorMessage();
+        } else {
+            parseJsonAndShow(data);
+        }
+    }
+
+    @Override
+    public void onLoaderReset(Loader<String> loader) {
+        /*
+         * We aren't using this method in our example application, but we are required to Override
+         * it to implement the LoaderCallbacks<String> interface
+         */
+    }
+
+    // Override onDestroy and unregister MainActivity as a SharedPreferenceChangedListener
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        /* Unregister MainActivity as an OnPreferenceChangedListener to avoid any memory leaks. */
+        PreferenceManager.getDefaultSharedPreferences(this)
+                .unregisterOnSharedPreferenceChangeListener(this);
     }
 
     /**
      * Returns 3 for Landscape Orientation.
      * Returns 2 for otherwise (Portrait Orientation)
      *
-     * @return
+     * @return int
      */
     private int getColumnsNumByOrientation() {
         if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) {
@@ -124,46 +252,35 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
             return 2;
     }
 
-    /**
-     * Saves the user's sort selection
-     *
-     * @param outState
-     */
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putString(USER_SORT_SELECTION, endpointUserSelection.toString());
-    }
 
-    /**
-     * Retrives the user's sort selection and uses it correctly show selection in UI as well as
-     * loads the correct data as per user sort selection.
-     *
-     * @param savedInstanceState
-     */
-    @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-        String userSortSelection = savedInstanceState.getString(USER_SORT_SELECTION);
-        endpointUserSelection = NetworkUtils.Endpoint.valueOf(userSortSelection);
-        loadMoviesData(endpointUserSelection);
-    }
-
-    /**
-     * Load movies data with the provided endpoint as per user's sort selection
-     *
-     * @param endpoint
-     */
-    private void loadMoviesData(NetworkUtils.Endpoint endpoint) {
-        showMoviesDataView();
-        new FetchMoviesDataTask().execute(endpoint);
+    private void showErrorMessage() {
+        mRecyclerViewMovies.setVisibility(View.INVISIBLE);
+        mErrorMessageDisplay.setVisibility(View.VISIBLE);
     }
 
     private void showMoviesDataView() {
-        /* First, make sure the error is invisible */
         mErrorMessageDisplay.setVisibility(View.INVISIBLE);
-        /* Then, make sure the movies data is visible */
         mRecyclerViewMovies.setVisibility(View.VISIBLE);
+    }
+
+    private void parseJsonAndShow(String jsonMoviesResponse) {
+        try {
+            moviesList = JsonUtils.parseMoviesJson(jsonMoviesResponse);
+            showMovies(moviesList);
+        } catch (JSONException e) {
+            e.printStackTrace();
+            showErrorMessage();
+        }
+    }
+
+    private void showMovies(List<Movie> moviesToShow) {
+        if (moviesToShow.isEmpty()) {
+            mErrorMessageDisplay.setText(R.string.msg_no_movies);
+            mErrorMessageDisplay.setVisibility(View.VISIBLE);
+        } else {
+            showMoviesDataView();
+            mMovieAdapter.setMovieData(moviesToShow);
+        }
     }
 
     @Override
@@ -178,118 +295,74 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
      * @param position
      */
     private void launchDetailActivity(int position) {
-        Context context = this;
         Intent intent = new Intent(this, DetailActivity.class);
-        intent.putExtra(DetailActivity.MOVIE, moviesList.get(position));
+        Movie mv = moviesList.get(position);
+        intent.putExtra(DetailActivity.MOVIE, mv);
+        intent.putExtra(DetailActivity.IS_MOVIE_FAVORITE, isMovieFavorite(mv));
         startActivity(intent);
     }
 
-    /**
-     * This method will make the error message visible and hide the weather
-     * View.
-     * <p>
-     * Since it is okay to redundantly set the visibility of a View, we don't
-     * need to check whether each view is currently visible or invisible.
-     */
-    private void showErrorMessage() {
-        /* First, hide the currently visible data */
-        mRecyclerViewMovies.setVisibility(View.INVISIBLE);
-        /* Then, show the error */
-        mErrorMessageDisplay.setVisibility(View.VISIBLE);
-    }
-
-    /**
-     * AsyncTask to run in background to fetch movies data from provided URL
-     */
-    public class FetchMoviesDataTask extends AsyncTask<NetworkUtils.Endpoint, Void, String> {
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            mLoadingIndicator.setVisibility(View.VISIBLE);
-        }
-
-        @Override
-        protected String doInBackground(NetworkUtils.Endpoint... endpoints) {
-
-            if (endpoints.length == 0) {
-                return null;
-            }
-
-            NetworkUtils.Endpoint endpoint = endpoints[0];
-            URL movieRequestURL = NetworkUtils.buildURL(endpoint);
-
-            try {
-                String jsonMoviesResponse = NetworkUtils.getResponseFromHttpUrl(movieRequestURL);
-                return jsonMoviesResponse;
-            } catch (IOException e) {
-                e.printStackTrace();
-                return null;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(String jsonMoviesResponse) {
-            mLoadingIndicator.setVisibility(View.INVISIBLE);
-            if (jsonMoviesResponse == null) {
-                showErrorMessage();
-            } else {
-                Log.v(TAG, "onPostExecute: successfully loaded movies data");
-                parseJsonAndShow(jsonMoviesResponse);
-            }
-        }
-    }
-
-    private void parseJsonAndShow(String jsonMoviesResponse) {
-        try {
-            moviesList = JsonUtils.parseMoviesJson(jsonMoviesResponse);
-            showMoviesDataView();
-            mMovieAdapter.setMovieData(moviesList);
-        } catch (JSONException e) {
-            e.printStackTrace();
-            showErrorMessage();
-        }
+    private boolean isMovieFavorite(Movie mv) {
+        return favoriteMoviesList.contains(mv);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.sort, menu);
-
-        // Get the menu item to set it checked as default sort order
-        MenuItem sortByPopular = menu.findItem(R.id.sort_by_popular);
-        MenuItem sortByTopRated = menu.findItem(R.id.sort_by_top_rated);
-        if (endpointUserSelection == NetworkUtils.Endpoint.POPULAR) {
-            sortByPopular.setChecked(true);
-        } else if (endpointUserSelection == NetworkUtils.Endpoint.TOPRATED) {
-            sortByTopRated.setChecked(true);
-        }
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case R.id.sort_by_popular:
-                if (!item.isChecked()) {
-                    item.setChecked(true);
-                    NetworkUtils.Endpoint endpoint = NetworkUtils.Endpoint.POPULAR;
-                    // note the user's selection to save in savedInstanceState
-                    endpointUserSelection = endpoint;
-                    loadMoviesData(endpoint);
-                }
+            case android.R.id.home:
+                NavUtils.navigateUpFromSameTask(this);
                 return true;
-            case R.id.sort_by_top_rated:
-                if (!item.isChecked()) {
-                    item.setChecked(true);
-                    NetworkUtils.Endpoint endpoint = NetworkUtils.Endpoint.TOPRATED;
-                    // note the user's selection to save in savedInstanceState
-                    endpointUserSelection = endpoint;
-                    loadMoviesData(endpoint);
-                }
-                return true;
+            case R.id.item_sort_by:
+                showAlertDialogSortBy().show();
             default:
                 return super.onOptionsItemSelected(item);
+        }
+    }
+
+    private Dialog showAlertDialogSortBy() {
+        // Instantiate an AlertDialog.Builder with its constructor
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        // Chain together various setter methods to set the dialog characteristics
+        builder.setTitle(R.string.dialog_title);
+
+        // build choice items
+        builder.setSingleChoiceItems(Endpoint.ENDPOINT_DISPLAY_NAMES, sharedPreferences.getInt(ENDPOINT_INDEX, DEFAULT_ENDPOINT_INDEX), new DialogInterface.OnClickListener() {
+
+            @Override
+            public void onClick(DialogInterface dialogInterface, int newClickedIndex) {
+                int oldIndex = sharedPreferences.getInt(ENDPOINT_INDEX, DEFAULT_ENDPOINT_INDEX);
+                // If same already selected option is selected, do nothing
+                // Otherwise
+                if (oldIndex != newClickedIndex) {
+                    SharedPreferences.Editor editor = sharedPreferences.edit();
+                    editor.putInt(ENDPOINT_INDEX, newClickedIndex);
+                    editor.apply();
+                }
+                dialogInterface.dismiss();
+            }
+        });
+        // Get the AlertDialog from create()
+        return builder.create();
+    }
+
+    //Override onSharedPreferenceChanged to set the preferences flag to true
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        if (key.equals(ENDPOINT_INDEX)) {
+            int selectedIndex = sharedPreferences.getInt(ENDPOINT_INDEX, DEFAULT_ENDPOINT_INDEX);
+            if (selectedIndex == Endpoint.FAVORITE_INDEX) {
+                moviesList = favoriteMoviesList;
+                showMovies(moviesList);
+            } else {
+                getSupportLoaderManager().restartLoader(MOVIES_DATA_LOADER_ID, null, this);
+            }
         }
     }
 }

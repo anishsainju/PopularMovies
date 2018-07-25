@@ -4,15 +4,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".MainActivity">
-    <group android:checkableBehavior="single">
     <item
-        android:id="@+id/sort_by_popular"
+        android:id="@+id/item_sort_by"
         android:orderInCategory="100"
-        android:title="@string/sort_by_popular"
-        app:showAsAction="never" />
-    <item
-        android:id="@+id/sort_by_top_rated"
-        android:title="@string/sort_by_top_rated"
-        app:showAsAction="never" />
-    </group>
+        android:title="@string/sort_by"
+        app:showAsAction="ifRoom" />
 </menu>

@@ -2,26 +2,199 @@ package com.anishsainju.udacity.popularmovies;
 
 import android.content.Intent;
 import android.databinding.DataBindingUtil;
+import android.net.Uri;
 import android.os.Bundle;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.app.NavUtils;
+import android.support.v4.content.AsyncTaskLoader;
+import android.support.v4.content.Loader;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.CheckBox;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import com.anishsainju.udacity.popularmovies.database.AppDatabase;
 import com.anishsainju.udacity.popularmovies.model.Movie;
 import com.anishsainju.udacity.popularmovies.databinding.ActivityDetailBinding;
+import com.anishsainju.udacity.popularmovies.model.Review;
+import com.anishsainju.udacity.popularmovies.model.Video;
+import com.anishsainju.udacity.popularmovies.utilities.AppExecutors;
+import com.anishsainju.udacity.popularmovies.utilities.Endpoint;
+import com.anishsainju.udacity.popularmovies.utilities.JsonUtils;
 import com.anishsainju.udacity.popularmovies.utilities.NetworkUtils;
 import com.squareup.picasso.Picasso;
 
-public class DetailActivity extends AppCompatActivity {
+import org.json.JSONException;
 
+import java.io.IOException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+
+public class DetailActivity extends AppCompatActivity implements VideoAdapter.VideoAdapterOnClickHandler{
+
+    private static final String TAG = DetailActivity.class.getSimpleName();
     public static final String MOVIE = "movie";
-    private Movie movie;
+    private static final int VIDEOS_LOADER_ID = 0;
+    private static final int REVIEWS_LOADER_ID = 1;
+    private static final String MOVIE_ID = "movie_id";
+    public static final String IS_MOVIE_FAVORITE = "isFavorite";
 
-    ActivityDetailBinding activityDetailBinding;
+    private ActivityDetailBinding activityDetailBinding;
+    // UI components
+    private RecyclerView mRecyclerViewVideos;
+    private RecyclerView mRecyclerViewReviews;
+    private TextView mErrorMsgVideosDisplay;
+    private TextView mErrorMsgReviewsDisplay;
+    private ProgressBar mVideosLoadingIndicator;
+    private ProgressBar mReviewsLoadingIndicator;
+    private CheckBox mFavoriteCheckBox;
+
+    // Adapter for RecyclerView
+    private VideoAdapter mVideoAdapter;
+    private ReviewAdapter mReviewAdapter;
+
+    private List<Video> mVideosList = new ArrayList<>();
+
+    private Movie movie;
+    private AppDatabase mDb;
+
+    private LoaderManager.LoaderCallbacks<String> videosLoaderCallbacks = new LoaderManager.LoaderCallbacks<String>() {
+        @Override
+        public Loader<String> onCreateLoader(int id, final Bundle bundle) {
+            return new AsyncTaskLoader<String>(DetailActivity.this) {
+
+                /* This String array will hold and help cache our weather data */
+                String mVideosData = null;
+
+                /**
+                 * Subclasses of AsyncTaskLoader must implement this to take care of loading their data.
+                 */
+                @Override
+                protected void onStartLoading() {
+                    /* If no arguments were passed, we don't have a query to perform. Simply return. */
+                    if (bundle == null) {
+                        return;
+                    }
+                    if (mVideosData != null) {
+                        deliverResult(mVideosData);
+                    } else {
+                        mVideosLoadingIndicator.setVisibility(View.VISIBLE);
+                        forceLoad();
+                    }
+                }
+
+                @Override
+                public String loadInBackground() {
+                    URL videosUrl = NetworkUtils.buildURL(bundle.getInt(MOVIE_ID), Endpoint.VIDEOS_URL);
+                    try {
+                        Log.v(TAG, "loadInBackground: loading movies' trailers data from API");
+                        return NetworkUtils.getResponseFromHttpUrl(videosUrl);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                }
+
+                /**
+                 * Sends the result of the load to the registered listener.
+                 *
+                 * @param data The result of the load
+                 */
+                public void deliverResult(String data) {
+                    mVideosData = data;
+                    super.deliverResult(data);
+                }
+            };
+        }
+
+        @Override
+        public void onLoadFinished(Loader<String> loader, String data) {
+            mVideosLoadingIndicator.setVisibility(View.INVISIBLE);
+            if (null == data) {
+                showErrorMessageVideos();
+            } else {
+                parseVideosJsonAndShow(data);
+            }
+        }
+
+        @Override
+        public void onLoaderReset(Loader<String> loader) {
+
+        }
+    };
+
+    private LoaderManager.LoaderCallbacks<String> reviewsLoaderCallbacks = new LoaderManager.LoaderCallbacks<String>() {
+        @Override
+        public Loader onCreateLoader(int id, final Bundle bundle) {
+            return new AsyncTaskLoader<String>(DetailActivity.this) {
+                String mReviewsData = null;
+                @Override
+                protected void onStartLoading() {
+                    if (bundle == null) {
+                        return;
+                    }
+                    if (mReviewsData != null) {
+                        deliverResult(mReviewsData);
+                    } else {
+                        mReviewsLoadingIndicator.setVisibility(View.VISIBLE);
+                        forceLoad();
+                    }
+                }
+
+                @Override
+                public String loadInBackground() {
+                    URL reviewsUrl = NetworkUtils.buildURL(bundle.getInt(MOVIE_ID), Endpoint.REVIEWS_URL);
+                    try {
+                        Log.v(TAG, "loadInBackground: loading movies' reviews data from API");
+                        return NetworkUtils.getResponseFromHttpUrl(reviewsUrl);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                }
+
+                public void deliverResult(String data) {
+                    mReviewsData = data;
+                    super.deliverResult(data);
+                }
+            };
+        }
+
+        @Override
+        public void onLoadFinished(Loader loader, String data) {
+            mReviewsLoadingIndicator.setVisibility(View.INVISIBLE);
+            if (null == data) {
+                showErrorMessageReviews();
+            } else {
+                parseReviewsJsonAndShow(data);
+            }
+        }
+
+        @Override
+        public void onLoaderReset(Loader loader) {
+
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
+
+        ActionBar actionBar = this.getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayHomeAsUpEnabled(true);
+        }
 
         activityDetailBinding = DataBindingUtil.setContentView(this, R.layout.activity_detail);
 
@@ -37,8 +210,39 @@ public class DetailActivity extends AppCompatActivity {
             return;
         }
 
+        Bundle loadMovieDataBundle = new Bundle();
+        loadMovieDataBundle.putInt(MOVIE_ID, movie.getId());
+        getSupportLoaderManager().initLoader(VIDEOS_LOADER_ID, loadMovieDataBundle, videosLoaderCallbacks);
+        getSupportLoaderManager().initLoader(REVIEWS_LOADER_ID, loadMovieDataBundle,reviewsLoaderCallbacks);
+
+        mRecyclerViewVideos = findViewById(R.id.rv_videos);
+        mRecyclerViewReviews = findViewById(R.id.rv_reviews);
+
+        mErrorMsgVideosDisplay = findViewById(R.id.tv_error_msg_video_display);
+        mErrorMsgReviewsDisplay = findViewById(R.id.tv_error_msg_review_display);
+
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
+        LinearLayoutManager layoutManager2 = new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false);
+        mRecyclerViewVideos.setLayoutManager(layoutManager);
+        mRecyclerViewReviews.setLayoutManager(layoutManager2);
+
+        mRecyclerViewVideos.setHasFixedSize(true);
+        mRecyclerViewReviews.setHasFixedSize(true);
+
+        mVideoAdapter = new VideoAdapter(this, this);
+        mReviewAdapter = new ReviewAdapter(this);
+
+        mRecyclerViewVideos.setAdapter(mVideoAdapter);
+        mRecyclerViewReviews.setAdapter(mReviewAdapter);
+
+        mVideosLoadingIndicator = findViewById(R.id.pb_video_loading_indicator);
+        mReviewsLoadingIndicator = findViewById(R.id.pb_review_loading_indicator);
+
+        // Set Default
         populateUI(movie);
         setTitle(movie.getTitle());
+
+        mDb = AppDatabase.getInstance(getApplicationContext());
     }
 
     private void closeOnError() {
@@ -47,6 +251,7 @@ public class DetailActivity extends AppCompatActivity {
     }
 
     private void populateUI(Movie movie) {
+        activityDetailBinding.tvTitle.setText(movie.getTitle());
         Picasso.with(this)
                 .load(NetworkUtils.buildImageURL(movie.getBackdropPath()))
                 .placeholder(R.drawable.ic_no_image)
@@ -64,7 +269,7 @@ public class DetailActivity extends AppCompatActivity {
             activityDetailBinding.tvReleaseDate.setText(releaseDate);
         }
 
-        String voteAverage = movie.getVoteAverage().toString();
+        String voteAverage = String.valueOf(movie.getVoteAverage());
         if (voteAverage.isEmpty()) {
             activityDetailBinding.tvUserRating.setText(R.string.not_available);
         } else {
@@ -77,5 +282,129 @@ public class DetailActivity extends AppCompatActivity {
         } else {
             activityDetailBinding.tvOverview.setText(overview);
         }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.detail_menu, menu);
+        mFavoriteCheckBox = (CheckBox) menu.findItem(R.id.action_checkbox_favorite).getActionView();
+        // check if this movie is already selected as Favorite
+        boolean isFavorite = getIntent().getBooleanExtra(IS_MOVIE_FAVORITE, false);
+        setCheckboxFavorite(isFavorite);
+        mFavoriteCheckBox.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // if already checked, uncheck and delete from database
+                if (mFavoriteCheckBox.isChecked()) {
+                    setCheckboxFavorite(false);
+                    final Movie movieToDelete = movie;
+                    AppExecutors.getsInstance().diskIO().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            mDb.movieDao().deleteMovie(movieToDelete);
+                        }
+                    });
+                } else {// if unchecked, check it and add movie to database
+                    setCheckboxFavorite(true);
+                    final Movie movieToAddToDB = movie;
+                    AppExecutors.getsInstance().diskIO().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            mDb.movieDao().insertMovie(movie);
+                        }
+                    });
+                }
+            }
+        });
+        return true;
+    }
+
+    private void setCheckboxFavorite(boolean favorite) {
+        if (favorite) {
+            mFavoriteCheckBox.setButtonDrawable(R.drawable.ic_action_favorite_checked);
+        } else {
+            mFavoriteCheckBox.setButtonDrawable(R.drawable.ic_action_favorite_unchecked);
+        }
+    }
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case android.R.id.home:
+                NavUtils.navigateUpFromSameTask(this);
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    private void showErrorMessageVideos() {
+        mRecyclerViewVideos.setVisibility(View.INVISIBLE);
+        mErrorMsgVideosDisplay.setVisibility(View.VISIBLE);
+    }
+
+    private void showErrorMessageReviews() {
+        mRecyclerViewReviews.setVisibility(View.INVISIBLE);
+        mErrorMsgReviewsDisplay.setVisibility(View.VISIBLE);
+    }
+
+    private void showVideosDataView() {
+        mErrorMsgVideosDisplay.setVisibility(View.INVISIBLE);
+        mRecyclerViewVideos.setVisibility(View.VISIBLE);
+    }
+
+    private void showReviewsDataView() {
+        mErrorMsgReviewsDisplay.setVisibility(View.INVISIBLE);
+        mRecyclerViewReviews.setVisibility(View.VISIBLE);
+    }
+
+    private void parseVideosJsonAndShow(String jsonMoviesResponse) {
+        try {
+            mVideosList = JsonUtils.parseVideosJson(jsonMoviesResponse);
+            showVideos(mVideosList);
+        } catch (JSONException e) {
+            e.printStackTrace();
+            showErrorMessageVideos();
+        }
+    }
+
+    private void showVideos(List<Video> videos) {
+        if (videos.isEmpty()) {
+            mErrorMsgVideosDisplay.setText(R.string.msg_no_videos);
+            mErrorMsgVideosDisplay.setVisibility(View.VISIBLE);
+        } else {
+            showVideosDataView();
+            mVideoAdapter.setVideoData(mVideosList);
+        }
+    }
+
+    private void parseReviewsJsonAndShow(String jsonMoviesResponse) {
+        try {
+            List<Review> mReviewsList = JsonUtils.parseReviewsJson(jsonMoviesResponse);
+            showReviews(mReviewsList);
+        } catch (JSONException e) {
+            e.printStackTrace();
+            showErrorMessageReviews();
+        }
+    }
+
+    private void showReviews(List<Review> reviews) {
+        if (reviews.isEmpty()) {
+            mErrorMsgReviewsDisplay.setText(R.string.msg_no_reviews);
+            mErrorMsgReviewsDisplay.setVisibility(View.VISIBLE);
+        } else {
+            showReviewsDataView();
+            mReviewAdapter.setReviewData(reviews);
+        }
+    }
+
+    @Override
+    public void onClick(int position) {
+        // Get the video from position
+        Video clickedVideo = mVideosList.get(position);
+        // Get the key of youtube video link]
+        URL youtubeURL = NetworkUtils.buildYoutubeURL(clickedVideo.getKey());
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(youtubeURL.toString()));
+        startActivity(intent);
     }
 }

@@ -1,59 +1,36 @@
 package com.anishsainju.udacity.popularmovies.model;
 
+import android.arch.persistence.room.Entity;
+import android.arch.persistence.room.PrimaryKey;
 import android.os.Parcel;
 import android.os.Parcelable;
-
-import java.util.List;
 
 /**
  * POJO class for Movie
  * Fields based on JSON response from
  * http://api.themoviedb.org/3/movie/popular?api_key=[YOUR_API_KEY]
  */
+@Entity(tableName = "movie")
 public class Movie implements Parcelable {
 
-    /* JSON response from http://api.themoviedb.org/3/movie/popular?api_key=[YOUR_API_KEY]
-    {
-            "vote_count": 3581,
-            "id": 299536,
-            "video": false,
-            "vote_average": 8.5,
-            "title": "Avengers: Infinity War",
-            "popularity": 544.063527,
-            "poster_path": "/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg",
-            "original_language": "en",
-            "original_title": "Avengers: Infinity War",
-            "genre_ids": [
-                12,
-                878,
-                14,
-                28
-            ],
-            "backdrop_path": "/bOGkgRGdhrBYJSLpXaxhXVstddV.jpg",
-            "adult": false,
-            "overview": "As the Avengers and their allies have continued to protect the world from threats too large for any one hero to handle, a new danger has emerged from the cosmic shadows: Thanos. A despot of intergalactic infamy, his goal is to collect all six Infinity Stones, artifacts of unimaginable power, and use them to inflict his twisted will on all of reality. Everything the Avengers have fought for has led up to this moment - the fate of Earth and existence itself has never been more uncertain.",
-            "release_date": "2018-04-25"
-        }
-    */
-
-    private Integer voteCount;
-    private Integer id;
-    private Boolean video;
-    private Double voteAverage;
+    @PrimaryKey
+    private int id;
+    private int voteCount;
+    private boolean video;
+    private double voteAverage;
     private String title;
-    private Double popularity;
+    private double popularity;
     private String posterPath;
     private String originalLanguage;
     private String originalTitle;
-    private int[] genreIds;
     private String backdropPath;
-    private Boolean adult;
+    private boolean adult;
     private String overview;
     private String releaseDate;
 
-    public Movie(Integer voteCount, Integer id, Boolean video, Double voteAverage, String title, Double popularity, String posterPath, String originalLanguage, String originalTitle, int[] genreIds, String backdropPath, Boolean adult, String overview, String releaseDate) {
-        this.voteCount = voteCount;
+    public Movie(int id, int voteCount, boolean video, double voteAverage, String title, double popularity, String posterPath, String originalLanguage, String originalTitle, String backdropPath, boolean adult, String overview, String releaseDate) {
         this.id = id;
+        this.voteCount = voteCount;
         this.video = video;
         this.voteAverage = voteAverage;
         this.title = title;
@@ -61,67 +38,114 @@ public class Movie implements Parcelable {
         this.posterPath = posterPath;
         this.originalLanguage = originalLanguage;
         this.originalTitle = originalTitle;
-        this.genreIds = genreIds;
         this.backdropPath = backdropPath;
         this.adult = adult;
         this.overview = overview;
         this.releaseDate = releaseDate;
     }
 
-    public Integer getVoteCount() {
+    public int getVoteCount() {
         return voteCount;
     }
 
-    public Integer getId() {
+    public void setVoteCount(int voteCount) {
+        this.voteCount = voteCount;
+    }
+
+    public int getId() {
         return id;
     }
 
-    public Boolean getVideo() {
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public boolean getVideo() {
         return video;
     }
 
-    public Double getVoteAverage() {
+    public void setVideo(boolean video) {
+        this.video = video;
+    }
+
+    public double getVoteAverage() {
         return voteAverage;
+    }
+
+    public void setVoteAverage(double voteAverage) {
+        this.voteAverage = voteAverage;
     }
 
     public String getTitle() {
         return title;
     }
 
-    public Double getPopularity() {
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public double getPopularity() {
         return popularity;
+    }
+
+    public void setPopularity(double popularity) {
+        this.popularity = popularity;
     }
 
     public String getPosterPath() {
         return posterPath;
     }
 
+    public void setPosterPath(String posterPath) {
+        this.posterPath = posterPath;
+    }
+
     public String getOriginalLanguage() {
         return originalLanguage;
+    }
+
+    public void setOriginalLanguage(String originalLanguage) {
+        this.originalLanguage = originalLanguage;
     }
 
     public String getOriginalTitle() {
         return originalTitle;
     }
 
-    public int[] getGenreIds() {
-        return genreIds;
+    public void setOriginalTitle(String originalTitle) {
+        this.originalTitle = originalTitle;
     }
 
     public String getBackdropPath() {
         return backdropPath;
     }
 
-    public Boolean getAdult() {
+    public void setBackdropPath(String backdropPath) {
+        this.backdropPath = backdropPath;
+    }
+
+    public boolean getAdult() {
         return adult;
+    }
+
+    public void setAdult(boolean adult) {
+        this.adult = adult;
     }
 
     public String getOverview() {
         return overview;
     }
 
+    public void setOverview(String overview) {
+        this.overview = overview;
+    }
+
     public String getReleaseDate() {
         return releaseDate;
+    }
+
+    public void setReleaseDate(String releaseDate) {
+        this.releaseDate = releaseDate;
     }
 
     @Override
@@ -140,7 +164,6 @@ public class Movie implements Parcelable {
         parcel.writeString(posterPath);
         parcel.writeString(originalLanguage);
         parcel.writeString(originalTitle);
-        parcel.writeIntArray(genreIds);
         parcel.writeString(backdropPath);
         parcel.writeByte((byte) (adult ? 1 : 0));
         parcel.writeString(overview);
@@ -148,7 +171,7 @@ public class Movie implements Parcelable {
     }
 
     //constructor used for parcel
-    public Movie(Parcel parcel) {
+    private Movie(Parcel parcel) {
         //read and set saved values from parcel
         voteCount = parcel.readInt();
         id = parcel.readInt();
@@ -159,14 +182,13 @@ public class Movie implements Parcelable {
         posterPath = parcel.readString();
         originalLanguage = parcel.readString();
         originalTitle = parcel.readString();
-        genreIds = parcel.createIntArray();
         backdropPath = parcel.readString();
         adult = parcel.readByte() != 0;
         overview = parcel.readString();
         releaseDate = parcel.readString();
     }
 
-    //creator - used when un-parceling our parcle (creating the object)
+    //creator - used when un-parceling our parcel (creating the object)
     public static final Parcelable.Creator<Movie> CREATOR = new Parcelable.Creator<Movie>() {
 
         @Override

@@ -1,17 +1,11 @@
 package com.anishsainju.udacity.popularmovies;
 
-import android.app.Activity;
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.GridView;
 import android.widget.ImageView;
-import android.widget.TextView;
 
 import com.anishsainju.udacity.popularmovies.model.Movie;
 import com.anishsainju.udacity.popularmovies.utilities.NetworkUtils;
@@ -37,9 +31,9 @@ public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.MovieAdapter
 
     public class MovieAdapterViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         // Each item display only contains an ImageView, if more added in future, add here
-        public final ImageView mImageView;
+        final ImageView mImageView;
 
-        public MovieAdapterViewHolder(View view) {
+        MovieAdapterViewHolder(View view) {
             super(view);
             mImageView = view.findViewById(R.id.movie_image);
             view.setOnClickListener(this);
@@ -78,7 +72,6 @@ public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.MovieAdapter
         if (null == mMoviesData) return 0;
         return mMoviesData.size();
     }
-
 
     public void setMovieData(List<Movie> moviesData) {
         mMoviesData.clear();

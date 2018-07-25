@@ -4,14 +4,18 @@
         An error has occurred. Please try again by restarting the app.
     </string>
     <string name="detail_error_message">Some error has occurred. Please try again.</string>
-    <string name="backrop_picture_content_description">Movie Backdrop picture</string>
+    <string name="backdrop_picture_content_description">Movie Backdrop picture</string>
     <string name="poster_picture_content_description">Movie Poster Picture</string>
     <string name="release_date_label">RELEASED:</string>
     <string name="user_rating_label">RATING:</string>
     <string name="overview_unavailable">Overview not available</string>
-    <string name="sort_by_popular">Most Popular</string>
-    <string name="sort_by_top_rated">Top Rated</string>
-    <string name="customSortByText">Sort By</string>
-    <string name="picture_content_description">Movie Image Description</string>
     <string name="not_available">Not available</string>
+    <string name="dialog_title">Sort By</string>
+    <string name="sort_by">Sort By</string>
+    <string name="trailers">Trailers</string>
+    <string name="reviews">Reviews</string>
+    <string name="favorite">Favorite</string>
+    <string name="msg_no_movies">There are no movies to show.</string>
+    <string name="msg_no_reviews">There are no reviews to show.</string>
+    <string name="msg_no_videos">There are no videos to show.</string>
 </resources>

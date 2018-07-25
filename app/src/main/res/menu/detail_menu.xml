@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:app="http://schemas.android.com/apk/res-auto"
+xmlns:tools="http://schemas.android.com/tools"
+tools:context=".tariff.ui.SearchOffersActivity">
+
+<item
+    android:id="@+id/action_checkbox_favorite"
+    app:actionViewClass="android.widget.CheckBox"
+    android:title="@string/favorite"
+    app:showAsAction="always" />
+</menu>
