@@ -18,3 +18,9 @@ release date
 The app uses API from the themoviedb.org.
 If you don’t already have an account, you will need to create one in order to request an API Key.
 In your request for a key, state that your usage will be for educational/non-commercial use. You will also need to provide some personal information to complete the request. Once you submit your request, you should receive your key via email shortly after.
+
+<img src="images/Screenshot_1527952655.png" width="250">
+
+<img src="images/Screenshot_1527952723.png" width="400">
+
+<img src="images/Screenshot_1527952817.png" width="250">
