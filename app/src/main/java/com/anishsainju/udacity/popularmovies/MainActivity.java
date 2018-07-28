@@ -303,7 +303,15 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
     }
 
     private boolean isMovieFavorite(Movie mv) {
-        return favoriteMoviesList.contains(mv);
+        if (mv == null)
+            return false;
+        else {
+            for (Movie m : favoriteMoviesList) {
+                if (m.getId() == mv.getId())
+                    return true;
+            }
+            return false;
+        }
     }
 
     @Override

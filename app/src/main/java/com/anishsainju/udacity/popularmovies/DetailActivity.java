@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.databinding.DataBindingUtil;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.app.NavUtils;
 import android.support.v4.content.AsyncTaskLoader;
@@ -13,8 +14,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.CheckBox;
@@ -23,8 +22,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.anishsainju.udacity.popularmovies.database.AppDatabase;
-import com.anishsainju.udacity.popularmovies.model.Movie;
 import com.anishsainju.udacity.popularmovies.databinding.ActivityDetailBinding;
+import com.anishsainju.udacity.popularmovies.model.Movie;
 import com.anishsainju.udacity.popularmovies.model.Review;
 import com.anishsainju.udacity.popularmovies.model.Video;
 import com.anishsainju.udacity.popularmovies.utilities.AppExecutors;
@@ -58,6 +57,7 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
     private ProgressBar mVideosLoadingIndicator;
     private ProgressBar mReviewsLoadingIndicator;
     private CheckBox mFavoriteCheckBox;
+    private FloatingActionButton mFavoriteFAB;
 
     // Adapter for RecyclerView
     private VideoAdapter mVideoAdapter;
@@ -67,6 +67,7 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
 
     private Movie movie;
     private AppDatabase mDb;
+    private static boolean isFavoriteMovie;
 
     private LoaderManager.LoaderCallbacks<String> videosLoaderCallbacks = new LoaderManager.LoaderCallbacks<String>() {
         @Override
@@ -243,6 +244,45 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
         setTitle(movie.getTitle());
 
         mDb = AppDatabase.getInstance(getApplicationContext());
+
+        mFavoriteFAB = findViewById(R.id.fab_favorite);
+        isFavoriteMovie = intent.getBooleanExtra(IS_MOVIE_FAVORITE, false);//isFavorite;
+        setFABFavorite(isFavoriteMovie);
+        mFavoriteFAB.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // if already checked, uncheck and delete from database
+                if (isFavoriteMovie) {
+                    isFavoriteMovie = false;
+                    setFABFavorite(false);
+                    final Movie movieToDelete = movie;
+                    AppExecutors.getsInstance().diskIO().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            mDb.movieDao().deleteMovie(movieToDelete);
+                        }
+                    });
+                } else {// if unchecked, check it and add movie to database
+                    isFavoriteMovie = true;
+                    setFABFavorite(true);
+                    final Movie movieToAddToDB = movie;
+                    AppExecutors.getsInstance().diskIO().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            mDb.movieDao().insertMovie(movieToAddToDB);
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    private void setFABFavorite(boolean favorite) {
+        if (favorite) {
+            mFavoriteFAB.setImageResource(R.drawable.ic_heart);
+        } else {
+            mFavoriteFAB.setImageResource(R.drawable.ic_heart_outline);
+        }
     }
 
     private void closeOnError() {
@@ -284,49 +324,6 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
         }
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.detail_menu, menu);
-        mFavoriteCheckBox = (CheckBox) menu.findItem(R.id.action_checkbox_favorite).getActionView();
-        // check if this movie is already selected as Favorite
-        boolean isFavorite = getIntent().getBooleanExtra(IS_MOVIE_FAVORITE, false);
-        setCheckboxFavorite(isFavorite);
-        mFavoriteCheckBox.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // if already checked, uncheck and delete from database
-                if (mFavoriteCheckBox.isChecked()) {
-                    setCheckboxFavorite(false);
-                    final Movie movieToDelete = movie;
-                    AppExecutors.getsInstance().diskIO().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            mDb.movieDao().deleteMovie(movieToDelete);
-                        }
-                    });
-                } else {// if unchecked, check it and add movie to database
-                    setCheckboxFavorite(true);
-                    final Movie movieToAddToDB = movie;
-                    AppExecutors.getsInstance().diskIO().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            mDb.movieDao().insertMovie(movie);
-                        }
-                    });
-                }
-            }
-        });
-        return true;
-    }
-
-    private void setCheckboxFavorite(boolean favorite) {
-        if (favorite) {
-            mFavoriteCheckBox.setButtonDrawable(R.drawable.ic_action_favorite_checked);
-        } else {
-            mFavoriteCheckBox.setButtonDrawable(R.drawable.ic_action_favorite_unchecked);
-        }
-    }
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
