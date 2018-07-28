@@ -279,8 +279,8 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
             mErrorMessageDisplay.setVisibility(View.VISIBLE);
         } else {
             showMoviesDataView();
-            mMovieAdapter.setMovieData(moviesToShow);
         }
+        mMovieAdapter.setMovieData(moviesToShow);
     }
 
     @Override
