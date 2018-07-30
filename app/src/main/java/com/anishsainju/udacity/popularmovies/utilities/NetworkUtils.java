@@ -3,6 +3,8 @@ package com.anishsainju.udacity.popularmovies.utilities;
 import android.net.Uri;
 import android.util.Log;
 
+import com.anishsainju.udacity.popularmovies.BuildConfig;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -29,7 +31,7 @@ public final class NetworkUtils {
     private static final String MOVIE_IMG_BASE_URL = "http://image.tmdb.org/t/p";
     private static final String MOVIE_IMG_URL_SIZE = "w185";
 
-    private static final String api_key = "replace this with your api key here";
+    private static final String api_key = BuildConfig.THE_MOVIE_DB_API_KEY;
 
     private static final String YOUTUBE_BASE_URL = "https://www.youtube.com/watch";
     private static final String QUERY_VIDEO_KEY = "v";

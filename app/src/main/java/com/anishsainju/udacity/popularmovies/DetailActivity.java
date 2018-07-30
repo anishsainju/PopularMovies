@@ -1,9 +1,14 @@
 package com.anishsainju.udacity.popularmovies;
 
+import android.arch.lifecycle.LiveData;
+import android.arch.lifecycle.Observer;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.databinding.DataBindingUtil;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.app.NavUtils;
@@ -46,7 +51,6 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
     private static final int VIDEOS_LOADER_ID = 0;
     private static final int REVIEWS_LOADER_ID = 1;
     private static final String MOVIE_ID = "movie_id";
-    public static final String IS_MOVIE_FAVORITE = "isFavorite";
 
     private ActivityDetailBinding activityDetailBinding;
     // UI components
@@ -56,7 +60,6 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
     private TextView mErrorMsgReviewsDisplay;
     private ProgressBar mVideosLoadingIndicator;
     private ProgressBar mReviewsLoadingIndicator;
-    private CheckBox mFavoriteCheckBox;
     private FloatingActionButton mFavoriteFAB;
 
     // Adapter for RecyclerView
@@ -246,8 +249,9 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
         mDb = AppDatabase.getInstance(getApplicationContext());
 
         mFavoriteFAB = findViewById(R.id.fab_favorite);
-        isFavoriteMovie = intent.getBooleanExtra(IS_MOVIE_FAVORITE, false);//isFavorite;
-        setFABFavorite(isFavoriteMovie);
+
+        favoriteMovieDBInit(movie.getId());
+
         mFavoriteFAB.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -277,6 +281,19 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
         });
     }
 
+    private void favoriteMovieDBInit(int movieId) {
+        final LiveData<Integer> isFavMovie = mDb.movieDao().doesMovieExists(movieId);
+        isFavMovie.observe(this, new Observer<Integer>() {
+            @Override
+            public void onChanged(@Nullable Integer integer) {
+                if (integer == null || !integer.equals(1))
+                    isFavoriteMovie = false;
+                else
+                    isFavoriteMovie = true;
+                setFABFavorite(isFavoriteMovie);
+            }
+        });
+    }
     private void setFABFavorite(boolean favorite) {
         if (favorite) {
             mFavoriteFAB.setImageResource(R.drawable.ic_heart);
@@ -399,9 +416,18 @@ public class DetailActivity extends AppCompatActivity implements VideoAdapter.Vi
     public void onClick(int position) {
         // Get the video from position
         Video clickedVideo = mVideosList.get(position);
-        // Get the key of youtube video link]
+        // Get the key of youtube video link
         URL youtubeURL = NetworkUtils.buildYoutubeURL(clickedVideo.getKey());
         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(youtubeURL.toString()));
-        startActivity(intent);
+
+        // Verify it resolves
+        PackageManager packageManager = getPackageManager();
+        List<ResolveInfo> activities = packageManager.queryIntentActivities(intent, 0);
+        boolean isIntentSafe = activities.size() > 0;
+
+        // Start an activity if it's safe
+        if (isIntentSafe) {
+            startActivity(intent);
+        }
     }
 }

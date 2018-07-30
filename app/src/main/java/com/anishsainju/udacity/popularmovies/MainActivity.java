@@ -298,20 +298,7 @@ public class MainActivity extends AppCompatActivity implements MovieAdapter.Movi
         Intent intent = new Intent(this, DetailActivity.class);
         Movie mv = moviesList.get(position);
         intent.putExtra(DetailActivity.MOVIE, mv);
-        intent.putExtra(DetailActivity.IS_MOVIE_FAVORITE, isMovieFavorite(mv));
         startActivity(intent);
-    }
-
-    private boolean isMovieFavorite(Movie mv) {
-        if (mv == null)
-            return false;
-        else {
-            for (Movie m : favoriteMoviesList) {
-                if (m.getId() == mv.getId())
-                    return true;
-            }
-            return false;
-        }
     }
 
     @Override

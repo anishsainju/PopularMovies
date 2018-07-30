@@ -22,4 +22,6 @@ public interface MovieDao {
     @Delete
     void deleteMovie(Movie movie);
 
+    @Query("SELECT 1 FROM movie WHERE id = :id")
+    LiveData<Integer> doesMovieExists(int id);
 }
